@@ -1,38 +1,30 @@
 #!/usr/bin/env python3
-"""Conway's Game of Life with hashlife-inspired memoization."""
-import sys
-
-class Life:
-    def __init__(self, cells=None): self.cells = set(cells or [])
-    def step(self):
-        neighbors = {}
-        for x, y in self.cells:
-            for dx in (-1,0,1):
-                for dy in (-1,0,1):
-                    if dx or dy: neighbors[(x+dx,y+dy)] = neighbors.get((x+dx,y+dy), 0) + 1
-        self.cells = {c for c, n in neighbors.items() if n == 3 or (n == 2 and c in self.cells)}
-    def run(self, steps):
-        for _ in range(steps): self.step()
-        return self
-    def display(self, size=20):
-        if not self.cells: return "(empty)"
-        lines = []
-        for y in range(-size//2, size//2):
-            lines.append(''.join('█' if (x,y) in self.cells else '·' for x in range(-size//2, size//2)))
-        return '\n'.join(lines)
-    @classmethod
-    def glider(cls): return cls([(1,0),(2,1),(0,2),(1,2),(2,2)])
-    @classmethod
-    def rpentomino(cls): return cls([(1,0),(2,0),(0,1),(1,1),(1,2)])
-    def population(self): return len(self.cells)
-
-if __name__ == "__main__":
-    life = Life.glider()
-    print(f"Glider at t=0 (pop={life.population()}):")
-    print(life.display(10))
-    life.run(4)
-    print(f"\nGlider at t=4 (pop={life.population()}):")
-    print(life.display(10))
-    rp = Life.rpentomino()
-    rp.run(100)
-    print(f"\nR-pentomino at t=100: population={rp.population()}")
+"""game_of_life2 - Conway's Game of Life with patterns."""
+import sys,time,os
+PATTERNS={"glider":[(0,1),(1,2),(2,0),(2,1),(2,2)],"blinker":[(1,0),(1,1),(1,2)],
+    "block":[(0,0),(0,1),(1,0),(1,1)],"beacon":[(0,0),(0,1),(1,0),(2,3),(3,2),(3,3)],
+    "rpentomino":[(0,1),(0,2),(1,0),(1,1),(2,1)]}
+def step(grid,rows,cols):
+    new=set()
+    candidates=set()
+    for r,c in grid:
+        for dr in(-1,0,1):
+            for dc in(-1,0,1):candidates.add(((r+dr)%rows,(c+dc)%cols))
+    for r,c in candidates:
+        n=sum(1 for dr in(-1,0,1) for dc in(-1,0,1) if(dr or dc) and((r+dr)%rows,(c+dc)%cols) in grid)
+        if(r,c) in grid:
+            if n in(2,3):new.add((r,c))
+        elif n==3:new.add((r,c))
+    return new
+def display(grid,rows,cols):
+    for r in range(rows):print("".join("█" if(r,c) in grid else " " for c in range(cols)))
+if __name__=="__main__":
+    pattern=sys.argv[1] if len(sys.argv)>1 else "glider"
+    steps=int(sys.argv[2]) if len(sys.argv)>2 else 50
+    rows,cols=24,60;grid=set()
+    cells=PATTERNS.get(pattern,PATTERNS["glider"])
+    for r,c in cells:grid.add((r+rows//2,c+cols//2))
+    for i in range(steps):
+        os.system("clear" if os.name!="nt" else "cls")
+        print(f"Step {i}, alive: {len(grid)}");display(grid,rows,cols);grid=step(grid,rows,cols)
+        time.sleep(0.1)
